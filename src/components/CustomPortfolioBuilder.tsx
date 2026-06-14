@@ -668,8 +668,15 @@ export default function CustomPortfolioBuilder({ capital, suggested, onApply, on
               disabled={rolling}
               title="Fill the builder with G's signature lineup"
             >
-              <span className="cpb-groll-dice" aria-hidden="true">🎲</span>
-              {rolling ? 'Rolling…' : 'How G would roll the dice'}
+              <svg className="cpb-groll-dice" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3.2" y="3.2" width="17.6" height="17.6" rx="4.5" stroke="currentColor" strokeWidth="1.5" />
+                <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+                <circle cx="16" cy="8" r="1.5" fill="currentColor" />
+                <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                <circle cx="8" cy="16" r="1.5" fill="currentColor" />
+                <circle cx="16" cy="16" r="1.5" fill="currentColor" />
+              </svg>
+              <span className="cpb-groll-label">{rolling ? 'Rolling…' : 'How G would roll the dice'}</span>
             </button>
 
             <div className="cpb-list">

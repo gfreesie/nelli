@@ -236,35 +236,116 @@
 }
 .cpb-modeToggle button.active { background: var(--accent); color: #fff; }
 
-/* "How G would roll the dice" CTA */
+/* "How G would roll the dice" — glassmorphic dark-tech CTA: cyan holographic
+   die + a live current running the border like electric wiring, over a faint
+   circuit grid. */
+@property --cpb-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
 .cpb-groll {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   margin-bottom: 10px;
-  padding: 10px 14px;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #e2b24f, #c08a2e);
-  color: #1a1208;
+  padding: 12px 16px;
+  border: 1px solid rgba(0, 229, 255, 0.28);
+  border-radius: 13px;
+  background:
+    radial-gradient(130% 130% at 0% 0%, rgba(0, 229, 255, 0.12), transparent 42%),
+    linear-gradient(135deg, rgba(12, 20, 33, 0.74), rgba(8, 13, 24, 0.68));
+  -webkit-backdrop-filter: blur(10px) saturate(1.25);
+  backdrop-filter: blur(10px) saturate(1.25);
+  color: #dff7ff;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(217, 164, 65, 0.32);
-  transition: transform 0.12s, box-shadow 0.2s, filter 0.2s;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 18px rgba(0, 229, 255, 0.12);
+  transition: transform 0.12s, box-shadow 0.25s, border-color 0.25s;
 }
-.cpb-groll:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 7px 22px rgba(217, 164, 65, 0.45); filter: brightness(1.04); }
+/* live current travelling around the border (electric wiring) */
+.cpb-groll::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--cpb-angle),
+    transparent 0deg, transparent 235deg,
+    rgba(0, 229, 255, 0.05) 270deg, #00e5ff 312deg, #b9fbff 332deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: cpb-current 3.2s linear infinite;
+  z-index: 1;
+}
+/* faint circuit-board grid */
+.cpb-groll::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image:
+    linear-gradient(rgba(0, 229, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.07) 1px, transparent 1px);
+  background-size: 13px 13px;
+  pointer-events: none;
+  opacity: 0.5;
+  z-index: 0;
+  animation: cpb-grid-pulse 4s ease-in-out infinite;
+}
+.cpb-groll:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(0, 229, 255, 0.6);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 0 28px rgba(0, 229, 255, 0.3);
+}
 .cpb-groll:active:not(:disabled) { transform: translateY(0); }
 .cpb-groll:disabled { cursor: default; }
-.cpb-groll-dice { font-size: 18px; line-height: 1; display: inline-block; }
-.cpb-groll.rolling .cpb-groll-dice { animation: cpb-dice-spin 0.5s linear infinite; }
+.cpb-groll-label {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 0 7px rgba(0, 229, 255, 0.4);
+}
+/* cyan holographic die */
+.cpb-groll-dice {
+  position: relative;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: #5ff6ff;
+  filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.9)) drop-shadow(0 0 9px rgba(0, 229, 255, 0.5));
+  animation: cpb-holo-flicker 2.6s ease-in-out infinite;
+}
+.cpb-groll.rolling { border-color: rgba(0, 229, 255, 0.7); }
+.cpb-groll.rolling .cpb-groll-dice { animation: cpb-dice-spin 0.45s linear infinite; }
+@keyframes cpb-current { to { --cpb-angle: 360deg; } }
+@keyframes cpb-grid-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.62; } }
+@keyframes cpb-holo-flicker {
+  0%, 100% { opacity: 1; }
+  47% { opacity: 0.95; }
+  50% { opacity: 0.6; }
+  53% { opacity: 0.96; }
+  70% { opacity: 0.88; }
+}
 @keyframes cpb-dice-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .cpb-groll.rolling .cpb-groll-dice { animation: none; }
+  .cpb-groll::before,
+  .cpb-groll::after,
+  .cpb-groll-dice { animation: none; }
   .cpb-groll:hover:not(:disabled) { transform: none; }
 }
 
