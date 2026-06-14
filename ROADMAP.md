@@ -21,6 +21,7 @@ A running log of what's been built and what's still on the wish list. Newest wor
 - [x] Full custom portfolio builder: Stocks / Crypto / Metals / Custom tabs, % ⇄ $ toggle, running total, leftover-to-cash, inline projected value.
 - [x] Live prices: crypto (CoinGecko), metals (gold-api.com), stocks (Financial Modeling Prep, free key).
 - [x] **Live ticker search** across all listed symbols (not just the curated list); added GLW, COHR + optics/semis names.
+- [x] **Live search → proper autocomplete:** ranked results (exact-ticker → prefix, major-US-exchange boost), foreign/ADR twins de-duped, keyboard nav (↑/↓/Enter/Esc) with a highlighted option + exchange badge, and **price-fill on highlight** (one quote per symbol vs bulk-fetching every hit — spares FMP's free-tier budget).
 - [x] Per-asset-class **drill-down** shows the actual selected holdings.
 - [x] **Ring (donut) hover** shows the custom holdings for that class — and renders above the centered figure so it's readable in both themes.
 - [x] Custom holdings roll up into the seven projection classes (donut + projection stay consistent).
@@ -56,7 +57,6 @@ _Add to this freely — it's the working list._
 - [ ] **Margin-call stress line** on the SBLOC projection (show the drawdown that would trigger a call at the chosen advance rate).
 - [ ] **Save / name multiple custom portfolios** and compare them side by side.
 - [ ] **Live tickers for bonds & REITs** in the builder (currently stocks/crypto/metals only).
-- [ ] **Rank/clean up live search results** (prioritize major exchanges, de-dupe ADR/foreign suffixes).
 - [ ] **Custom vector logo mark** option (a clean line-art horse) as an alternative to the photo orb in light mode.
 - [ ] **Deploy live** (GitHub Pages or similar) for a shareable public URL.
 - [ ] **PDF export** of the full client summary (beyond the PNG card).
