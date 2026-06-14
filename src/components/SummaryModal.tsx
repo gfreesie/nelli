@@ -100,15 +100,15 @@ const PALETTES = {
     bg: '#FAF8F4',
     ink: '#22303A',
     muted: '#6B7A86',
-    headerFrom: '#2F8F7B',
-    headerTo: '#1F6B5B',
+    headerFrom: '#3A72C4',
+    headerTo: '#27538F',
     headerText: '#FFFFFF',
     headerSub: 'rgba(255,255,255,0.85)',
     gold: '#D9A441',
-    box: '#E3F2EE',
+    box: '#E8F0FB',
     boxText: '#22303A',
     insurance: '#8C3A52',
-    projection: '#2F8F7B',
+    projection: '#2F6FB0',
     stars: false,
   },
   dark: {
@@ -464,13 +464,13 @@ export default function SummaryModal(props: Props) {
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: 'My Pathfinder plan',
-            text: 'My investment discovery summary from Pathfinder.',
+            title: 'My Nelli plan',
+            text: 'My investment discovery summary from Nelli.',
           });
         } else {
           await navigator.share({
-            title: 'My Pathfinder plan',
-            text: 'My investment discovery summary from Pathfinder.',
+            title: 'My Nelli plan',
+            text: 'My investment discovery summary from Nelli.',
           });
         }
       } catch {

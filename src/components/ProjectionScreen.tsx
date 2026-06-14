@@ -195,7 +195,7 @@ export default function ProjectionScreen({ answers, profile, allocation, customH
               />
             )}
             <Line type="monotone" dataKey="Conservative" stroke="#5B8DB8" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="Expected" stroke="#2F8F7B" strokeWidth={3} dot={false} />
+            <Line type="monotone" dataKey="Expected" stroke="#2F6FB0" strokeWidth={3} dot={false} />
             <Line type="monotone" dataKey="Optimistic" stroke="#D9A441" strokeWidth={2} dot={false} />
             {insuranceOn && split < 100 && (
               <ReferenceLine

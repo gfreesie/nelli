@@ -189,6 +189,8 @@ const US: Array<[string, string]> = [
   ['MPWR', 'Monolithic Power Systems'],
   ['TER', 'Teradyne'],
   ['ENTG', 'Entegris'],
+  ['GME', 'GameStop'],
+  ['AMC', 'AMC Entertainment'],
 ];
 
 // --- International (ADRs) and ex-US ETFs -------------------------------------
