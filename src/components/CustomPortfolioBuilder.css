@@ -423,8 +423,14 @@
 .cpb-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 
 @media (max-width: 820px) {
-  .cpb-body { grid-template-columns: 1fr; }
-  .cpb-picker { border-right: none; border-bottom: 1px solid var(--border); max-height: 42vh; }
+  /* Stack into one scrolling column. The old fixed-height picker overflowed its
+     box (esp. with the API-key prompt showing) and landed on top of the holdings
+     panel + dice button. Letting the whole body scroll keeps them separated. */
+  .cpb-body { grid-template-columns: 1fr; overflow-y: auto; }
+  .cpb-picker { border-right: none; border-bottom: 1px solid var(--border); }
+  .cpb-results { flex: none; max-height: 240px; min-height: 0; }
+  .cpb-list { flex: none; min-height: 0; }
+  .cpb-groll { margin-top: 4px; }
   .cpb-overlay { padding: 10px; }
   .cpb-panel { max-height: 96vh; }
 }
