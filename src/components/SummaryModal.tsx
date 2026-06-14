@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Copy, Download, Share2, X } from 'lucide-react';
-import type { AllocationLine, Answers, ProfileDef } from '../types';
+import type { AllocationLine, Answers, AssetKey, ProfileDef } from '../types';
 import type { YearPoint } from '../logic/projections';
 import { fmtCompact, fmtMoney, savingsPlan } from '../logic/projections';
+import { ASSET_META } from '../logic/allocation';
+import {
+  ACQUISITION_DISCLAIMER,
+  type CustomHolding,
+  whereToBuy,
+} from '../logic/customPortfolio';
 import { buildSummary } from '../logic/exportSummary';
 
 interface Props {
@@ -17,13 +23,77 @@ interface Props {
   sblocSplit?: number;   // 0-100 share of the lever directed to SBLOC
   sblocLtv?: number;     // advance rate %
   sblocBorrow?: number;  // borrowing power at the long horizon
+  holdings?: CustomHolding[] | null;
+  clientName?: string;
   onClose: () => void;
+}
+
+const KEY_ORDER: AssetKey[] = [
+  'usStocks', 'intlStocks', 'metals', 'crypto', 'landReit', 'bonds', 'cash',
+];
+
+// Wrap text to a width, drawing at most maxLines lines; returns the y after.
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineH: number,
+  maxLines = 2,
+): number {
+  const words = text.split(' ');
+  let line = '';
+  let lines = 0;
+  for (let i = 0; i < words.length; i++) {
+    const test = line ? line + ' ' + words[i] : words[i];
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      lines += 1;
+      y += lineH;
+      line = words[i];
+      if (lines >= maxLines - 1) {
+        // last allowed line: dump the rest (may slightly overflow width)
+        let rest = words.slice(i).join(' ');
+        while (ctx.measureText(rest + '…').width > maxWidth && rest.length > 4) {
+          rest = rest.slice(0, -1);
+        }
+        ctx.fillText(rest + (words.slice(i).join(' ') !== rest ? '…' : ''), x, y);
+        return y + lineH;
+      }
+    } else {
+      line = test;
+    }
+  }
+  if (line) {
+    ctx.fillText(line, x, y);
+    y += lineH;
+  }
+  return y;
 }
 
 type CardTheme = 'light' | 'dark';
 
 const W = 900;
-const H = 1560;
+const BASE_H = 1560;
+
+// The card grows when a custom holdings breakdown is appended.
+function computeHeight(p: Omit<Props, 'onClose'>): number {
+  const holdings = p.holdings ?? [];
+  if (holdings.length === 0) return BASE_H;
+  const savings = savingsPlan(p.answers);
+  const split = p.sblocSplit ?? 0;
+  const boxLineCount =
+    1 +
+    (savings.active ? 1 : 0) +
+    (p.insuranceOn && split < 100 ? 1 : 0) +
+    (p.insuranceOn && split > 0 ? 1 : 0);
+  const boxH = 40 + boxLineCount * 40;
+  const yAfterProj = 934 + p.allocation.length * 46 + boxH;
+  const groups = new Set(holdings.map((h) => h.assetClass)).size;
+  const breakdownH = 140 + groups * 120 + holdings.length * 30;
+  return Math.max(BASE_H, yAfterProj + breakdownH + 110);
+}
 
 const PALETTES = {
   light: {
@@ -61,10 +131,12 @@ const PALETTES = {
 function draw(
   cv: HTMLCanvasElement,
   theme: CardTheme,
-  { answers, profile, allocation, points, monthly, premium, insuranceOn, sblocSplit, sblocLtv, sblocBorrow }: Omit<Props, 'onClose'>,
+  { answers, profile, allocation, points, monthly, premium, insuranceOn, sblocSplit, sblocLtv, sblocBorrow, holdings }: Omit<Props, 'onClose'>,
+  clientName: string,
 ) {
   const ctx = cv.getContext('2d')!;
   const P = PALETTES[theme];
+  const H = cv.height;
   const savings = savingsPlan(answers);
   const investMonthly = Math.max(0, monthly - (insuranceOn ? premium : 0) - savings.perMonth);
 
@@ -116,6 +188,12 @@ function draw(
   ctx.fillStyle = P.headerSub;
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   ctx.fillText('Investment Discovery · ' + date, W / 2, 128);
+  const name = clientName.trim();
+  if (name) {
+    ctx.font = '600 22px Segoe UI, system-ui, sans-serif';
+    ctx.fillStyle = theme === 'dark' ? P.gold : '#FFFFFF';
+    ctx.fillText('Prepared for ' + name, W / 2, 158);
+  }
 
   // profile
   ctx.fillStyle = theme === 'dark' ? P.gold : profile.color;
@@ -236,6 +314,60 @@ function draw(
   ctx.font = '500 17px Segoe UI, system-ui, sans-serif';
   ctx.fillText('Expected scenario, with conservative–optimistic range below', W / 2, y);
 
+  // custom holdings breakdown (grouped by asset class, with where-to-buy)
+  const hold = holdings ?? [];
+  if (hold.length > 0) {
+    y += 56;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = P.ink;
+    ctx.font = '800 28px Segoe UI, system-ui, sans-serif';
+    ctx.fillText('Your holdings & where to get them', 70, y);
+    ctx.strokeStyle = theme === 'dark' ? 'rgba(217,164,65,0.35)' : 'rgba(0,0,0,0.10)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(70, y + 16);
+    ctx.lineTo(W - 70, y + 16);
+    ctx.stroke();
+    y += 22;
+    const groups = new Map<AssetKey, CustomHolding[]>();
+    for (const h of hold) {
+      const arr = groups.get(h.assetClass) ?? [];
+      arr.push(h);
+      groups.set(h.assetClass, arr);
+    }
+    for (const k of KEY_ORDER) {
+      const hs = groups.get(k);
+      if (!hs) continue;
+      y += 40;
+      ctx.fillStyle = theme === 'dark' ? P.gold : ASSET_META[k].color;
+      ctx.font = '700 23px Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(ASSET_META[k].label, 70, y);
+      for (const h of hs) {
+        y += 30;
+        ctx.fillStyle = P.ink;
+        ctx.font = '500 20px Segoe UI, system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        const label = h.symbol + (h.name && h.name !== h.symbol ? ' · ' + h.name : '');
+        ctx.fillText(label.length > 46 ? label.slice(0, 45) + '…' : label, 96, y);
+        ctx.font = '600 20px Segoe UI, system-ui, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(fmtMoney(h.dollars), W - 70, y);
+      }
+      y += 30;
+      ctx.fillStyle = P.muted;
+      ctx.font = 'italic 16px Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      y = wrapText(ctx, 'Where: ' + whereToBuy(hs[0].category, k), 96, y, W - 170, 22, 2);
+    }
+    y += 26;
+    ctx.fillStyle = P.muted;
+    ctx.font = 'italic 15px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(ACQUISITION_DISCLAIMER, 70, y);
+    ctx.textAlign = 'center';
+  }
+
   // footer
   ctx.fillStyle = P.muted;
   ctx.font = '500 17px Segoe UI, system-ui, sans-serif';
@@ -247,18 +379,25 @@ export default function SummaryModal(props: Props) {
   const { onClose } = props;
   const ref = useRef<HTMLCanvasElement>(null);
   const [copied, setCopied] = useState(false);
+  const [clientName, setClientName] = useState(props.clientName ?? '');
   const [cardTheme, setCardTheme] = useState<CardTheme>(() =>
     document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
   );
 
+  const cardH = computeHeight(props);
+
   useEffect(() => {
-    if (ref.current) draw(ref.current, cardTheme, props);
+    if (ref.current) draw(ref.current, cardTheme, props, clientName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.allocation, props.monthly, props.premium, cardTheme]);
+  }, [props.allocation, props.monthly, props.premium, props.holdings, cardTheme, clientName, cardH]);
+
+  const fileSlug = () =>
+    clientName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') ||
+    cardTheme;
 
   const savePng = () => {
     const a = document.createElement('a');
-    a.download = `pathfinder-summary-${cardTheme}.png`;
+    a.download = `pathfinder-${fileSlug()}.png`;
     a.href = ref.current!.toDataURL('image/png');
     a.click();
   };
@@ -271,7 +410,7 @@ export default function SummaryModal(props: Props) {
     if (!canvas) return;
     canvas.toBlob(async (blob) => {
       if (!blob) return;
-      const file = new File([blob], `pathfinder-summary-${cardTheme}.png`, { type: 'image/png' });
+      const file = new File([blob], `pathfinder-${fileSlug()}.png`, { type: 'image/png' });
       try {
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
@@ -305,6 +444,8 @@ export default function SummaryModal(props: Props) {
       props.sblocSplit ?? 0,
       props.sblocLtv ?? 70,
       props.sblocBorrow ?? 0,
+      clientName.trim(),
+      props.holdings ?? [],
     );
     try {
       await navigator.clipboard.writeText(text);
@@ -333,6 +474,14 @@ export default function SummaryModal(props: Props) {
           <X size={18} />
         </button>
         <div className="card-theme-chips">
+          <input
+            className="client-name-input"
+            type="text"
+            placeholder="Client name (optional)"
+            value={clientName}
+            maxLength={40}
+            onChange={(e) => setClientName(e.target.value)}
+          />
           <button className={`chip ${cardTheme === 'light' ? 'active' : ''}`} onClick={() => setCardTheme('light')}>
             Light card
           </button>
@@ -340,7 +489,7 @@ export default function SummaryModal(props: Props) {
             Telos dark
           </button>
         </div>
-        <canvas ref={ref} width={W} height={H} className="summary-canvas" />
+        <canvas ref={ref} width={W} height={cardH} className="summary-canvas" />
         <div className="modal-actions">
           <button className="btn primary" onClick={savePng}>
             <Download size={16} /> Save image

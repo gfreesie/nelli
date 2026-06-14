@@ -24,18 +24,20 @@ import {
   project,
   savingsPlan,
 } from '../logic/projections';
+import type { CustomHolding } from '../logic/customPortfolio';
 import SummaryModal from './SummaryModal';
 
 interface Props {
   answers: Answers;
   profile: ProfileDef;
   allocation: AllocationLine[];
+  customHoldings: CustomHolding[] | null;
   onBack: () => void;
 }
 
 const HORIZONS = [5, 10, 20, 30];
 
-export default function ProjectionScreen({ answers, profile, allocation, onBack }: Props) {
+export default function ProjectionScreen({ answers, profile, allocation, customHoldings, onBack }: Props) {
   const insuranceOn = answers.insurance === 'core' || answers.insurance === 'slice';
   const savings = savingsPlan(answers);
   const [monthly, setMonthly] = useState(answers.monthly);
@@ -285,6 +287,7 @@ export default function ProjectionScreen({ answers, profile, allocation, onBack 
             sblocSplit={insuranceOn ? split : 0}
             sblocLtv={ltv}
             sblocBorrow={borrowPowerAt(30)}
+            holdings={customHoldings}
             onClose={() => setShowSummary(false)}
           />
         )}

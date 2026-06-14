@@ -177,6 +177,18 @@ const US: Array<[string, string]> = [
   ['FCX', 'Freeport-McMoRan'],
   ['NEM', 'Newmont'],
   ['NUE', 'Nucor'],
+  ['GLW', 'Corning'],
+  ['COHR', 'Coherent'],
+  ['LITE', 'Lumentum Holdings'],
+  ['FN', 'Fabrinet'],
+  ['NVMI', 'Nova'],
+  ['ANET', 'Arista Networks'],
+  ['FSLR', 'First Solar'],
+  ['ENPH', 'Enphase Energy'],
+  ['ON', 'ON Semiconductor'],
+  ['MPWR', 'Monolithic Power Systems'],
+  ['TER', 'Teradyne'],
+  ['ENTG', 'Entegris'],
 ];
 
 // --- International (ADRs) and ex-US ETFs -------------------------------------

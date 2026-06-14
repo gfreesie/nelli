@@ -21,6 +21,7 @@ import {
   fetchMetalPrices,
   fetchStockQuotes,
   getStockApiKey,
+  searchStocks,
   setStockApiKey,
   type Quote,
 } from '../logic/prices';
@@ -76,6 +77,7 @@ export default function CustomPortfolioBuilder({ capital, suggested, onApply, on
   const [crypto, setCrypto] = useState<Quote[]>([]);
   const [metals, setMetals] = useState<Quote[]>([]);
   const [stocks, setStocks] = useState<Record<string, Quote>>({});
+  const [stockSearch, setStockSearch] = useState<Quote[]>([]); // live FMP search hits
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -107,6 +109,31 @@ export default function CustomPortfolioBuilder({ capital, suggested, onApply, on
     void loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Live ticker search across all listed stocks (debounced), so any symbol —
+  // not just the curated universe — is reachable. Prices are fetched for hits.
+  useEffect(() => {
+    if (tab !== 'stock' || !apiKey || query.trim().length < 1) {
+      setStockSearch([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const hits = await searchStocks(query, apiKey);
+      if (cancelled) return;
+      setStockSearch(hits);
+      const need = hits.map((h) => h.symbol).filter((s) => !stocks[s]);
+      if (need.length) {
+        const q = await fetchStockQuotes(need, apiKey);
+        if (!cancelled) setStocks((prev) => ({ ...prev, ...q.data }));
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, tab, apiKey]);
 
   useEffect(() => {
     saveHoldings(holdings);
@@ -156,10 +183,9 @@ export default function CustomPortfolioBuilder({ capital, suggested, onApply, on
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (tab === 'stock') {
-      const list = STOCK_UNIVERSE.filter(
+      const curated = STOCK_UNIVERSE.filter(
         (s) => !q || s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q),
-      ).slice(0, 80);
-      return list.map((s) => ({
+      ).map((s) => ({
         symbol: s.symbol,
         name: s.name,
         price: stocks[s.symbol]?.price ?? null,
@@ -167,6 +193,19 @@ export default function CustomPortfolioBuilder({ capital, suggested, onApply, on
         assetClass: s.assetClass as AssetKey,
         image: undefined as string | undefined,
       }));
+      const seen = new Set(curated.map((r) => r.symbol));
+      // Append live search hits for any listed ticker not in the curated set
+      const extra = stockSearch
+        .filter((h) => !seen.has(h.symbol))
+        .map((h) => ({
+          symbol: h.symbol,
+          name: h.name,
+          price: stocks[h.symbol]?.price ?? null,
+          category: 'stock' as AssetCategory,
+          assetClass: 'usStocks' as AssetKey,
+          image: undefined as string | undefined,
+        }));
+      return [...curated, ...extra].slice(0, 80);
     }
     if (tab === 'crypto') {
       return crypto
@@ -194,7 +233,7 @@ export default function CustomPortfolioBuilder({ capital, suggested, onApply, on
         }));
     }
     return [];
-  }, [tab, query, crypto, metals, stocks]);
+  }, [tab, query, crypto, metals, stocks, stockSearch]);
 
   const addedSymbols = useMemo(
     () => new Set(holdings.map((h) => `${h.category}:${h.symbol}`)),

@@ -207,3 +207,34 @@ export async function fetchStockQuotes(
     return { data: {}, stale: true, error: String(e) };
   }
 }
+
+// Live symbol search across every FMP-listed ticker — lets the user add any US
+// stock or ETF, not just the curated universe. Prices are filled in separately
+// via fetchStockQuotes. Requires an API key.
+export async function searchStocks(query: string, apiKey: string): Promise<Quote[]> {
+  const q = query.trim();
+  if (!apiKey || q.length < 1) return [];
+  try {
+    const url =
+      `https://financialmodelingprep.com/api/v3/search?query=${encodeURIComponent(q)}` +
+      `&limit=25&apikey=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const rows = (await res.json()) as Array<{
+      symbol: string;
+      name: string;
+      currency?: string;
+    }>;
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .filter((r) => r.symbol && (r.currency ?? 'USD') === 'USD')
+      .map((r) => ({
+        symbol: r.symbol.toUpperCase(),
+        name: r.name ?? r.symbol,
+        price: 0, // filled in by fetchStockQuotes
+        category: 'stock' as const,
+      }));
+  } catch {
+    return [];
+  }
+}

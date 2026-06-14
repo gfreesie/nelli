@@ -9,6 +9,41 @@ import { ASSET_META } from './allocation';
 
 export type AssetCategory = 'stock' | 'crypto' | 'metal' | 'custom' | 'cash';
 
+// Where to acquire each asset, by category (falling back to the projection
+// class for manual/custom holdings). Examples, not endorsements.
+export const ACQUISITION_DISCLAIMER =
+  'Venues are examples, not endorsements — do your own diligence.';
+
+export function whereToBuy(category: AssetCategory, assetClass: AssetKey): string {
+  switch (category) {
+    case 'stock':
+      return 'Brokerage — Fidelity, Schwab, or Vanguard (or a commission-free app like Robinhood).';
+    case 'crypto':
+      return 'Major exchange — Coinbase, Kraken, or Gemini; move long-term holds to a hardware wallet (Ledger/Trezor).';
+    case 'metal':
+      return 'Bullion dealers — APMEX, JM Bullion, or SD Bullion (secure storage); or ETFs like GLD/SLV/IAU.';
+    case 'cash':
+      return 'High-yield savings (FDIC-insured) or a money-market fund.';
+    case 'custom':
+    default:
+      break;
+  }
+  switch (assetClass) {
+    case 'bonds':
+      return 'Treasuries at TreasuryDirect.gov; brokered CDs and bond funds (BND) via your brokerage.';
+    case 'landReit':
+      return 'REIT ETFs (VNQ) via brokerage; direct land via a local realtor or auction.';
+    case 'cash':
+      return 'High-yield savings (FDIC-insured) or a money-market fund.';
+    case 'crypto':
+      return 'Major exchange — Coinbase, Kraken, or Gemini; hardware wallet for long-term holds.';
+    case 'metals':
+      return 'Bullion dealers — APMEX, JM Bullion, SD Bullion; or ETFs like GLD/SLV/IAU.';
+    default:
+      return 'Acquire through the relevant venue for this asset; value is self-reported.';
+  }
+}
+
 export interface CustomHolding {
   id: string;
   symbol: string;

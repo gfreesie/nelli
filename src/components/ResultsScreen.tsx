@@ -16,13 +16,19 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { AllocationLine, Answers, ProfileDef } from '../types';
 import { BREAKDOWNS } from '../logic/allocation';
 import { fmtMoney, savingsPlan } from '../logic/projections';
+import {
+  ACQUISITION_DISCLAIMER,
+  type CustomHolding,
+  whereToBuy,
+} from '../logic/customPortfolio';
 import CustomPortfolioBuilder from './CustomPortfolioBuilder';
 
 interface Props {
   profile: ProfileDef;
   allocation: AllocationLine[];
   customAllocation: AllocationLine[] | null;
-  onApplyCustom: (lines: AllocationLine[]) => void;
+  customHoldings: CustomHolding[] | null;
+  onApplyCustom: (lines: AllocationLine[], holdings: CustomHolding[]) => void;
   onClearCustom: () => void;
   answers: Answers;
   blendIdx: number | null;
@@ -35,6 +41,7 @@ export default function ResultsScreen({
   profile,
   allocation,
   customAllocation,
+  customHoldings,
   onApplyCustom,
   onClearCustom,
   answers,
@@ -46,6 +53,8 @@ export default function ResultsScreen({
   const [showBuilder, setShowBuilder] = useState(false);
   const customActive = customAllocation !== null;
   const display = customAllocation ?? allocation;
+  const holdingsByClass = (key: string) =>
+    (customHoldings ?? []).filter((h) => h.assetClass === key);
   const insuranceOn = answers.insurance === 'core' || answers.insurance === 'slice';
   const savings = savingsPlan(answers);
   const investMonthly = Math.max(
@@ -140,7 +149,31 @@ export default function ResultsScreen({
                     <Cell key={a.key} fill={a.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v) => fmtMoney(Number(v))} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || payload.length === 0) return null;
+                    const line = payload[0].payload as AllocationLine;
+                    const hs = customActive ? holdingsByClass(line.key) : [];
+                    return (
+                      <div className="ring-tip">
+                        <strong>{line.label}</strong>
+                        <span className="ring-tip-num">
+                          {line.pct}% · {fmtMoney(line.dollars)}
+                        </span>
+                        {hs.length > 0 && (
+                          <ul>
+                            {hs.slice(0, 8).map((h) => (
+                              <li key={h.id}>
+                                <span>{h.symbol}</span>
+                                <em>{fmtMoney(h.dollars)}</em>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
             <div className="donut-center">
@@ -174,16 +207,50 @@ export default function ResultsScreen({
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.25 }}
                       >
-                        <p className="bd-intro">{bd.intro}</p>
-                        {bd.lines.map((l) => (
-                          <div key={l.name} className="bd-line">
-                            <span className="bd-name">{l.name}</span>
-                            <span className="bd-num">
-                              {l.pct}% · {fmtMoney(Math.round((l.pct / 100) * a.dollars))}
-                            </span>
-                            {l.note && <span className="bd-note">{l.note}</span>}
-                          </div>
-                        ))}
+                        {(() => {
+                          const hs = holdingsByClass(a.key);
+                          if (customActive && hs.length > 0) {
+                            const classTotal = hs.reduce((s, h) => s + h.dollars, 0) || a.dollars;
+                            return (
+                              <>
+                                <p className="bd-intro">Your selected {a.label.toLowerCase()}:</p>
+                                {hs.map((h) => (
+                                  <div key={h.id} className="bd-line">
+                                    <span className="bd-name">
+                                      {h.symbol}
+                                      {h.name && h.name !== h.symbol ? ` · ${h.name}` : ''}
+                                    </span>
+                                    <span className="bd-num">
+                                      {Math.round((h.dollars / classTotal) * 100)}% ·{' '}
+                                      {fmtMoney(h.dollars)}
+                                    </span>
+                                    {h.price != null && (
+                                      <span className="bd-note">≈ {fmtMoney(h.price)} / unit</span>
+                                    )}
+                                  </div>
+                                ))}
+                                <p className="bd-where">
+                                  <strong>Where to buy:</strong> {whereToBuy(hs[0].category, a.key)}
+                                </p>
+                                <p className="bd-disclaimer">{ACQUISITION_DISCLAIMER}</p>
+                              </>
+                            );
+                          }
+                          return (
+                            <>
+                              <p className="bd-intro">{bd.intro}</p>
+                              {bd.lines.map((l) => (
+                                <div key={l.name} className="bd-line">
+                                  <span className="bd-name">{l.name}</span>
+                                  <span className="bd-num">
+                                    {l.pct}% · {fmtMoney(Math.round((l.pct / 100) * a.dollars))}
+                                  </span>
+                                  {l.note && <span className="bd-note">{l.note}</span>}
+                                </div>
+                              ))}
+                            </>
+                          );
+                        })()}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -275,8 +342,8 @@ export default function ResultsScreen({
           <CustomPortfolioBuilder
             capital={answers.capital}
             suggested={display}
-            onApply={(lines) => {
-              onApplyCustom(lines);
+            onApply={(lines, holdings) => {
+              onApplyCustom(lines, holdings);
               setShowBuilder(false);
             }}
             onClose={() => setShowBuilder(false)}

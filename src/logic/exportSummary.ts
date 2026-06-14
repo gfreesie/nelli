@@ -1,7 +1,8 @@
-import type { AllocationLine, Answers, ProfileDef } from '../types';
+import type { AllocationLine, Answers, AssetKey, ProfileDef } from '../types';
 import type { YearPoint } from './projections';
 import { blendedReturns, fmtMoney, savingsPlan } from './projections';
-import { allocationWeights } from './allocation';
+import { ASSET_META, allocationWeights } from './allocation';
+import { ACQUISITION_DISCLAIMER, type CustomHolding, whereToBuy } from './customPortfolio';
 
 const LABELS: Record<string, Record<string, string>> = {
   timeline: { lt2: 'Under 2 years', y2_5: '2–5 years', y5_10: '5–10 years', y10p: '10+ years' },
@@ -25,13 +26,18 @@ export function buildSummary(
   sblocSplit = 0,
   sblocLtv = 70,
   sblocBorrow = 0,
+  clientName = '',
+  holdings: CustomHolding[] = [],
 ): string {
   const l = (field: keyof typeof LABELS, v: string | null) => (v ? LABELS[field][v] : '—');
   const [rc, re, ro] = blendedReturns(allocationWeights(allocation));
   const horizons = [5, 10, 20, 30];
 
+  const KEY_ORDER: AssetKey[] = ['usStocks', 'intlStocks', 'metals', 'crypto', 'landReit', 'bonds', 'cash'];
+
   const lines: string[] = [
     '=== PATHFINDER — INVESTMENT DISCOVERY SUMMARY ===',
+    clientName ? `Prepared for: ${clientName}` : '',
     `Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`,
     '',
     '--- ANSWERS ---',
@@ -67,6 +73,25 @@ export function buildSummary(
     ),
     `Monthly investing (after premium): ${fmtMoney(monthlyInvest)}/mo, auto-split across the same mix (DCA)`,
     '',
+    ...(holdings.length
+      ? [
+          '--- YOUR HOLDINGS & WHERE TO GET THEM ---',
+          ...KEY_ORDER.flatMap((k) => {
+            const hs = holdings.filter((h) => h.assetClass === k);
+            if (!hs.length) return [];
+            return [
+              `${ASSET_META[k].label}:`,
+              ...hs.map(
+                (h) =>
+                  `  • ${h.symbol}${h.name && h.name !== h.symbol ? ` (${h.name})` : ''}: ${fmtMoney(h.dollars)}`,
+              ),
+              `  Where: ${whereToBuy(hs[0].category, k)}`,
+            ];
+          }),
+          ACQUISITION_DISCLAIMER,
+          '',
+        ]
+      : []),
     '--- PROJECTIONS (illustrative, not guarantees) ---',
     `Blended annual return assumptions — Conservative ${rc.toFixed(1)}%, Expected ${re.toFixed(1)}%, Optimistic ${ro.toFixed(1)}%`,
     ...horizons.map((h) => {

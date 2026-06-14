@@ -12,6 +12,7 @@ import ResultsScreen from './components/ResultsScreen';
 import ProjectionScreen from './components/ProjectionScreen';
 import ProgressPath from './components/ProgressPath';
 import StarfieldBackground from './components/StarfieldBackground';
+import type { CustomHolding } from './logic/customPortfolio';
 
 type Phase = 'intro' | 'quiz' | 'results' | 'projection';
 
@@ -23,6 +24,7 @@ interface SavedState {
   answers: Answers;
   blendIdx: number | null;
   customAllocation: AllocationLine[] | null;
+  customHoldings?: CustomHolding[] | null;
 }
 
 function loadState(): SavedState | null {
@@ -45,6 +47,9 @@ export default function App() {
   const [blendIdx, setBlendIdx] = useState<number | null>(saved?.blendIdx ?? null);
   const [customAllocation, setCustomAllocation] = useState<AllocationLine[] | null>(
     saved?.customAllocation ?? null,
+  );
+  const [customHoldings, setCustomHoldings] = useState<CustomHolding[] | null>(
+    saved?.customHoldings ?? null,
   );
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
@@ -85,6 +90,7 @@ export default function App() {
     }
     setBlendIdx(null);
     setCustomAllocation(null);
+    setCustomHoldings(null);
   }, [profile.id]);
 
   // Persist progress so a refresh resumes where the user left off.
@@ -92,12 +98,21 @@ export default function App() {
     try {
       localStorage.setItem(
         STATE_KEY,
-        JSON.stringify({ phase, qIndex, answers, blendIdx, customAllocation }),
+        JSON.stringify({ phase, qIndex, answers, blendIdx, customAllocation, customHoldings }),
       );
     } catch {
       /* storage unavailable */
     }
-  }, [phase, qIndex, answers, blendIdx, customAllocation]);
+  }, [phase, qIndex, answers, blendIdx, customAllocation, customHoldings]);
+
+  const applyCustom = (lines: AllocationLine[], holdings: CustomHolding[]) => {
+    setCustomAllocation(lines);
+    setCustomHoldings(holdings);
+  };
+  const clearCustom = () => {
+    setCustomAllocation(null);
+    setCustomHoldings(null);
+  };
 
   const startOver = () => {
     try {
@@ -108,6 +123,7 @@ export default function App() {
     setAnswers(initialAnswers);
     setBlendIdx(null);
     setCustomAllocation(null);
+    setCustomHoldings(null);
     setQIndex(0);
     setPhase('intro');
   };
@@ -191,12 +207,13 @@ export default function App() {
                 profile={profile}
                 allocation={allocation}
                 customAllocation={customAllocation}
-                onApplyCustom={setCustomAllocation}
-                onClearCustom={() => setCustomAllocation(null)}
+                customHoldings={customHoldings}
+                onApplyCustom={applyCustom}
+                onClearCustom={clearCustom}
                 answers={answers}
                 blendIdx={blendIdx}
                 onSelectBlend={(idx) => {
-                  setCustomAllocation(null);
+                  clearCustom();
                   setBlendIdx(idx);
                 }}
                 onContinue={() => setPhase('projection')}
@@ -211,6 +228,7 @@ export default function App() {
                 answers={answers}
                 profile={profile}
                 allocation={effectiveAllocation}
+                customHoldings={customAllocation ? customHoldings : null}
                 onBack={() => setPhase('results')}
               />
             )}
