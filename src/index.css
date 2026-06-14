@@ -836,11 +836,18 @@ input[type='range']::-moz-range-thumb {
   white-space: nowrap;
   line-height: 1; /* tight box so the star aligns to the i (matches the mockup) */
 }
-.nelli-i { position: relative; }
+/* inline-block gives the "i" a deterministic 1em-tall box to anchor the star to.
+   As a bare inline element, the star's `bottom` reference (the inline box edge under
+   line-height:1 with Playfair's tall metrics) is computed differently by WebKit
+   (iOS Safari) than Blink, so the star landed at its pre-fix spot on iPhones. */
+.nelli-i { position: relative; display: inline-block; }
 .nelli-star {
   position: absolute;
   left: 50%;
-  bottom: 0.76em;
+  /* Tuned against the inline-block .nelli-i box (1em tall, line-height:1) so the
+     star dots the i identically in WebKit/iOS and Blink. Was .76em when anchored
+     to the bare inline box. */
+  bottom: 0.61em;
   transform: translateX(-50%);
   width: 0.36em;
   height: 0.36em;
