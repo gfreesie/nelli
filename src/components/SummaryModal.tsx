@@ -513,7 +513,7 @@ export default function SummaryModal(props: Props) {
   return (
     <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div
-        className="modal-box"
+        className="modal-box summary-modal"
         initial={{ scale: 0.92, y: 24 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.92, y: 24 }}
@@ -538,7 +538,9 @@ export default function SummaryModal(props: Props) {
             Celestial dark
           </button>
         </div>
-        <canvas ref={ref} width={W} height={cardH} className="summary-canvas" />
+        <div className="summary-canvas-scroll">
+          <canvas ref={ref} width={W} height={cardH} className="summary-canvas" />
+        </div>
         <div className="modal-actions">
           <button className="btn primary" onClick={savePng}>
             <Download size={16} /> Save image

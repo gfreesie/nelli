@@ -759,15 +759,38 @@ input[type='range']::-moz-range-thumb {
   place-items: center;
   z-index: 2;
 }
-.summary-canvas {
-  max-height: min(72vh, 700px);
-  max-width: 100%;
-  width: auto;
-  height: auto;
+/* Summary card: give the modal a fixed, readable width and let the tall canvas
+   scroll inside it (rather than scaling the whole card down to fit the height,
+   which made the text tiny/squished). */
+.summary-modal { width: min(720px, 94vw); }
+.summary-canvas-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   border-radius: 12px;
   border: 1px solid var(--border);
+  background: var(--bg-soft);
+}
+.summary-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 11px;
 }
 .modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* Idle "still there?" session-reset warning */
+.session-timeout {
+  width: min(420px, 92vw);
+  text-align: center;
+  padding: 28px 26px 22px;
+  gap: 16px;
+}
+.session-timeout h2 { margin: 0; font-size: 22px; color: var(--ink); }
+.session-timeout p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.session-timeout p strong { color: var(--accent); }
+.session-timeout .modal-actions { margin-top: 4px; }
 
 /* Theme toggle */
 .theme-toggle {
